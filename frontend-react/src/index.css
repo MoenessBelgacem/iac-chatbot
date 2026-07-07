@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Dark Mode Palette */
+  --bg-base: #020617; /* Very dark slate */
+  --bg-gradient-1: rgba(59, 130, 246, 0.08); /* Blue subtle */
+  --bg-gradient-2: rgba(16, 185, 129, 0.05); /* Emerald subtle */
+  
+  /* Panels (Glassmorphism) */
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.12);
+  --glass-blur: blur(16px);
+  
+  /* Accents */
+  --accent-primary: #3b82f6; /* Blue 500 */
+  --accent-primary-hover: #2563eb; /* Blue 600 */
+  --accent-secondary: #10b981; /* Emerald 500 */
+  --accent-error: #ef4444; /* Red 500 */
+  --accent-warning: #f59e0b; /* Amber 500 */
+  
+  /* Text */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dark: #1e293b;
+  
+  /* Messages */
+  --msg-user: #2563eb;
+  --msg-assistant: rgba(30, 41, 59, 0.8);
+  
+  /* Shadows */
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+  --shadow-panel: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  height: 100%;
+  width: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+/* Background Ambient Glow */
+#root {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: 
+    radial-gradient(circle at 15% 50%, var(--bg-gradient-1), transparent 50%),
+    radial-gradient(circle at 85% 30%, var(--bg-gradient-2), transparent 50%);
+  padding: 2rem;
+}
+
+/* Base Glass Container */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-panel);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Code Blocks Syntax Highlighting adjustments */
+pre code.hljs {
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #0d1117 !important;
+  border: 1px solid var(--glass-border);
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.85rem;
+}

@@ -1,0 +1,59 @@
+Infrastructure as Code & Automation pilotée par Chatbot Intelligent 
+Description du proje
+t Ce projet consiste à concevoir et mettre en œuvre une plateforme intelligente d’automatisation de l’infrastructure, basée sur les principes de l’Infrastructure as Code (IaC) et enrichie par un chatbot conversationnel capable de comprendre les besoins exprimés en langage naturel. La plateforme permet de déployer, configurer et gérer automatiquement des machines virtuelles et des conteneurs, en fonction de la demande de l’utilisateur et de l’environnement cible. Deux environnements d’exécution sont pris en charge : 
+• VMware vSphere dédié au provisioning et à la gestion de machines virtuelles 
+• OpenShift Container Platform (OCP) permettant : 
+❖ Le déploiement de conteneurs Kubernetes 
+❖ Le déploiement de machines virtuelles via OpenShift Virtualization (KubeVirt)
+ L’utilisateur interagit avec la plateforme à travers un chatbot intelligent, sans avoir besoin de maîtriser les outils d’automatisation, les langages IaC ou les spécificités des plateformes sousjacentes.
+ Chatbot & Interaction en langage naturel 
+Le chatbot constitue le point d’entrée unique de la plateforme. 
+Il est capable de : 
+• Comprendre les requêtes en langage naturel (français ou anglais) 
+• Identifier le type de ressource demandé : 
+❖ Machine virtuelle 
+❖ Conteneur 
+• Déterminer la plateforme cible :
+ ❖ VMware vSphere 
+❖ OpenShift Container Platform
+ • Extraire les paramètres techniques (CPU, RAM, stockage, image, réseau)
+ • Générer dynamiquement le code Infrastructure as Code approprié
+ Le chatbot transforme ainsi une intention humaine en une description technique automatisable. 
+Infrastructure as Code & Automation pilotée par Chatbot Intelligent 
+Infrastructure as Code & Automation
+ La solution repose sur des modèles Infrastructure as Code permettant :
+ • Des déploiements reproductibles 
+• La standardisation des environnements
+ • La réduction des erreurs humaines 
+Environnement VMware vSphere
+ • Création automatisée de machines virtuelles
+ • Configuration des ressources et du réseau 
+• Gestion cohérente du cycle de vie des VM
+ Environnement OpenShift Container Platform
+ • Déploiement d’applications conteneurisées (pods, services, deployments)
+ • Création de machines virtuelles via OpenShift Virtualization 
+• Gestion unifiée des workloads VM et conteneurs 
+Les déploiements sont exécutés via des pipelines d’automatisation, intégrant des étapes de validation, de journalisation et de contrôle.
+ Fonctionnement global 
+1. L’utilisateur formule une demande via le chatbot 
+2. Le chatbot analyse et structure la requête 
+3. Le type de ressource et la plateforme sont identifiés 
+4. Le code Infrastructure as Code est généré 
+5. Validation et exécution du déploiement
+ 6. La ressource est créée et mise à disposition
+ Objectifs du projet 
+• Automatiser le provisioning d’infrastructure 
+• Supporter machines virtuelles et conteneurs
+ • Unifier la gestion VMware et OpenShift 
+
+• Simplifier les opérations IT via le langage naturel
+ • Introduire l’IA dans l’automatisation cloud
+ • Garantir standardisation, traçabilité et fiabilité 
+Infrastructure as Code & Automation pilotée par Chatbot Intelligent 
+Résultats attendus
+ • Plateforme IaC multi-environnements
+ • Déploiement automatisé de VM sur VMware 
+• Déploiement automatisé de VM et conteneurs sur OpenShift
+ • Chatbot intelligent de provisioning
+ • Réduction du temps de déploiement
+ • Diminution des erreurs humaines 

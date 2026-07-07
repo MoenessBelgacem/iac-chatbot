@@ -1,0 +1,75 @@
+####################################################
+# Variables - à adapter selon ton environnement vCenter
+# Renseigne ces valeurs dans un fichier terraform.tfvars
+# (ne jamais commiter ce fichier dans Git)
+####################################################
+
+variable "vsphere_user" {
+  description = "Utilisateur vCenter"
+  type        = string
+}
+
+variable "vsphere_password" {
+  description = "Mot de passe vCenter"
+  type        = string
+  sensitive   = true
+}
+
+variable "vsphere_server" {
+  description = "Adresse du serveur vCenter (IP ou FQDN)"
+  type        = string
+}
+
+variable "vsphere_allow_unverified_ssl" {
+  description = "Autoriser les certificats SSL non vérifiés (utile en lab/homelab)"
+  type        = bool
+  default     = true
+}
+
+variable "datacenter_name" {
+  description = "Nom du datacenter vSphere"
+  type        = string
+}
+
+variable "cluster_name" {
+  description = "Nom du cluster de calcul vSphere"
+  type        = string
+}
+
+variable "datastore_name" {
+  description = "Nom du datastore cible"
+  type        = string
+}
+
+variable "network_name" {
+  description = "Nom du port group / réseau vSphere"
+  type        = string
+  default     = "{{ network }}"
+}
+
+variable "template_name" {
+  description = "Nom du template VM à cloner"
+  type        = string
+}
+
+variable "domain" {
+  description = "Domaine DNS pour la VM"
+  type        = string
+  default     = "local"
+}
+
+variable "vm_ip_address" {
+  description = "Adresse IP statique de la VM"
+  type        = string
+}
+
+variable "vm_netmask" {
+  description = "Masque de sous-réseau (ex: 24)"
+  type        = number
+  default     = 24
+}
+
+variable "vm_gateway" {
+  description = "Passerelle réseau"
+  type        = string
+}

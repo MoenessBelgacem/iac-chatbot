@@ -1,0 +1,65 @@
+####################################################
+# Fichier généré automatiquement par le chatbot IaC
+# Ressource : VM KubeVirt sur OpenShift - {{ image }}
+# Ne pas éditer manuellement - régénérer via le chatbot
+####################################################
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: {{ vm_name }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ vm_name }}
+    generated-by: chatbot-iac
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: {{ vm_name }}
+    spec:
+      domain:
+        cpu:
+          cores: {{ cpu }}
+        resources:
+          requests:
+            memory: "{{ ram_gb }}Gi"
+          limits:
+            memory: "{{ ram_gb }}Gi"
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: {{ network }}
+              masquerade: {}
+      networks:
+        - name: {{ network }}
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: {{ image }}
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              hostname: {{ vm_name }}
+              chpasswd:
+                expire: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ vm_name }}-disk
+  namespace: {{ namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ storage_gb }}Gi

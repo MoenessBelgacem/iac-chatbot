@@ -1,0 +1,69 @@
+####################################################
+# Fichier généré automatiquement par le chatbot IaC
+# Ressource : Conteneur OpenShift - {{ image }}
+# Ne pas éditer manuellement - régénérer via le chatbot
+####################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ app_name }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ app_name }}
+    generated-by: chatbot-iac
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ app_name }}
+  template:
+    metadata:
+      labels:
+        app: {{ app_name }}
+    spec:
+      containers:
+        - name: {{ app_name }}
+          image: {{ image }}
+          resources:
+            requests:
+              cpu: "{{ cpu }}"
+              memory: "{{ ram_gb }}Gi"
+            limits:
+              cpu: "{{ cpu }}"
+              memory: "{{ ram_gb }}Gi"
+          ports:
+            - containerPort: {{ container_port }}
+          volumeMounts:
+            - name: {{ app_name }}-storage
+              mountPath: {{ mount_path }}
+      volumes:
+        - name: {{ app_name }}-storage
+          persistentVolumeClaim:
+            claimName: {{ app_name }}-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ app_name }}-pvc
+  namespace: {{ namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ storage_gb }}Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ app_name }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ app_name }}
+spec:
+  selector:
+    app: {{ app_name }}
+  ports:
+    - port: {{ container_port }}
+      targetPort: {{ container_port }}
+  type: ClusterIP
