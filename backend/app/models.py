@@ -54,10 +54,16 @@ class ChatResponse(BaseModel):
     message: Optional[str] = None  # message conversationnel du bot
     data: Optional[DemandeRessource] = None
     generation: Optional[GenerationResult] = None
+    generations: Optional[list[GenerationResult]] = None  # Pour les stacks multi-ressources
     error: Optional[str] = None
     raw_model_output: Optional[str] = None
     needs_clarification: bool = False
     session_id: Optional[str] = None
+    # Nouvelles fonctionnalités
+    diagram: Optional[str] = None           # Code Mermaid du diagramme d'architecture
+    cost_estimate: Optional[dict] = None    # Estimation de coûts
+    compliance: Optional[list[dict]] = None # Résultats de conformité sécurité
+    stack_name: Optional[str] = None        # Nom de la stack si applicable
 
 
 class HistoryEntry(BaseModel):

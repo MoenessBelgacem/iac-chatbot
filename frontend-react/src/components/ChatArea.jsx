@@ -1,16 +1,58 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot } from 'lucide-react';
+import { Send, Bot, Mic, MicOff } from 'lucide-react';
 import { MessageBubble } from './MessageBubble';
 import { motion } from 'framer-motion';
 
 export function ChatArea({ messages, onSendMessage, isTyping, apiStatus }) {
   const [input, setInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
   const endOfMessagesRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'fr-FR';
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('');
+        setInput(transcript);
+        
+        // If final result, auto-send
+        if (event.results[0].isFinal) {
+          setIsListening(false);
+        }
+      };
+
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const toggleVoice = () => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      setInput('');
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -33,7 +75,7 @@ export function ChatArea({ messages, onSendMessage, isTyping, apiStatus }) {
         {/* Welcome Message */}
         <MessageBubble message={{
           role: 'assistant',
-          text: 'Bonjour ! Je suis ton assistant Infrastructure as Code. Que souhaites-tu déployer aujourd\'hui ?\n\n*Exemple : "Je veux une VM Ubuntu 22.04 sur vSphere avec 4 CPU, 8 Go de RAM et 50 Go de disque" ou "Déploie un conteneur nginx sur OpenShift".*'
+          text: 'Bonjour ! Je suis ton assistant Infrastructure as Code. 🚀\n\n*Exemples de commandes :*\n• "Déploie une VM Ubuntu sur vSphere avec 4 CPU"\n• "Conteneur nginx sur OpenShift"\n• "Déploie une stack WordPress"\n• "Supprime la dernière ressource"\n\n🎤 *Tu peux aussi me parler avec le bouton micro !*'
         }} />
 
         {/* Chat Messages */}
@@ -64,12 +106,23 @@ export function ChatArea({ messages, onSendMessage, isTyping, apiStatus }) {
           <input
             type="text"
             className="chat-input"
-            placeholder="Décris l'infrastructure que tu souhaites déployer..."
+            placeholder={isListening ? "🎤 Je t'écoute..." : "Décris l'infrastructure à déployer..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isTyping}
             autoFocus
           />
+          {recognitionRef.current && (
+            <button 
+              type="button" 
+              className={`voice-btn ${isListening ? 'listening' : ''}`}
+              onClick={toggleVoice}
+              disabled={isTyping}
+              title={isListening ? 'Arrêter l\'écoute' : 'Commande vocale'}
+            >
+              {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+            </button>
+          )}
           <button type="submit" className="send-btn" disabled={!input.trim() || isTyping}>
             <Send size={18} />
           </button>

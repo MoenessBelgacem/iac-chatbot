@@ -66,12 +66,18 @@ function App() {
           // Assistant asks a follow-up question
           setMessages(prev => [...prev, { role: 'assistant', text: data.message }]);
         } else {
-          // Generation successful
-          setMessages(prev => [...prev, { 
+          // Generation successful — include all new data
+          const assistantMsg = { 
             role: 'assistant', 
             text: data.message,
-            code: data.generation?.contenu 
-          }]);
+            code: data.generation?.contenu || 
+                  (data.generations ? Object.assign({}, ...data.generations.map(g => g.contenu || {})) : null),
+            diagram: data.diagram || null,
+            costEstimate: data.cost_estimate || null,
+            compliance: data.compliance || null,
+            stackName: data.stack_name || null,
+          };
+          setMessages(prev => [...prev, assistantMsg]);
           setSessionId(null); // Reset session after success
           loadHistory(); // Refresh history
         }
@@ -82,7 +88,7 @@ function App() {
           text: `❌ ${data.error}`,
           isError: true
         }]);
-        setSessionId(null); // Reset session on hard error
+        setSessionId(null);
       }
     } catch (error) {
       setMessages(prev => [...prev, { 
@@ -96,8 +102,6 @@ function App() {
   };
 
   const handleSelectHistory = (prompt) => {
-    // Optional: could populate input or just send directly
-    // For now, let's just send it if it's not typing
     if (!isTyping) {
       handleSendMessage(prompt);
     }

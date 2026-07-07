@@ -1,19 +1,66 @@
-import { RefreshCw, Clock } from 'lucide-react';
+import { RefreshCw, Clock, FileDown, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+const API_URL = 'http://127.0.0.1:8000';
+
 export function ChatSidebar({ history, onRefresh, onSelect, isLoading }) {
+  
+  const downloadPDF = async () => {
+    try {
+      const res = await fetch(`${API_URL}/report/pdf`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'iac-chatbot-report.pdf';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error('Failed to download PDF', e);
+    }
+  };
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
         <h2><Clock size={18} /> Historique</h2>
-        <button 
-          className="icon-btn" 
-          onClick={onRefresh}
-          disabled={isLoading}
-          title="Rafraîchir l'historique"
-        >
-          <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            className="icon-btn" 
+            onClick={downloadPDF}
+            title="Télécharger le rapport PDF"
+          >
+            <FileDown size={18} />
+          </button>
+          <button 
+            className="icon-btn" 
+            onClick={onRefresh}
+            disabled={isLoading}
+            title="Rafraîchir l'historique"
+          >
+            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+          </button>
+        </div>
+      </div>
+
+      {/* Stacks Shortcuts */}
+      <div className="stacks-section">
+        <div className="section-label-sidebar"><Layers size={14} /> Stacks Rapides</div>
+        <div className="stacks-grid">
+          {[
+            { id: 'wordpress', label: '🌐 WordPress', cmd: 'Déploie une stack WordPress' },
+            { id: 'lamp', label: '💡 LAMP', cmd: 'Déploie une stack LAMP' },
+            { id: 'monitoring', label: '📊 Monitoring', cmd: 'Déploie une stack monitoring' },
+            { id: 'cache', label: '⚡ Cache', cmd: 'Déploie une stack cache nginx' },
+            { id: 'elk', label: '🔍 ELK', cmd: 'Déploie une stack ELK' },
+          ].map(s => (
+            <button key={s.id} className="stack-btn" onClick={() => onSelect(s.cmd)} title={s.cmd}>
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="history-list">

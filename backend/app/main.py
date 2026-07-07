@@ -7,6 +7,8 @@ Point d'entrée de l'application. Expose :
 - GET  /history    → historique des déploiements
 - GET  /history/{id} → détail d'une entrée
 - GET  /stats      → statistiques
+- GET  /report/pdf → rapport PDF téléchargeable
+- GET  /stacks     → liste des stacks prédéfinies
 """
 
 import sys
@@ -16,10 +18,10 @@ from pathlib import Path
 # Ajouter la racine du projet au sys.path pour les imports "backend.app.X"
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import ValidationError
 
 from backend.app.models import (
@@ -32,10 +34,15 @@ from backend.app.models import (
 from backend.app.nlu import extraire_demande
 from backend.app.generators import generer_iac
 from backend.app import history
+from backend.app.cost_estimator import estimer_cout
+from backend.app.compliance import verifier_conformite
+from backend.app.diagram_gen import generer_diagramme
+from backend.app.stacks import detecter_stack, obtenir_stack, lister_stacks
+from backend.app.pdf_report import generer_rapport_pdf
 
 app = FastAPI(
     title="IaC Chatbot API",
-    version="1.0.0",
+    version="2.0.0",
     description="Infrastructure as Code & Automation pilotée par Chatbot Intelligent",
 )
 
@@ -89,12 +96,29 @@ def health_check():
 def chat(request: ChatRequest):
     """
     Reçoit un message en langage naturel et :
-    1. Extrait les paramètres via Ollama (multi-tours si besoin)
-    2. Valide la cohérence métier (Pydantic)
-    3. Génère le fichier IaC correspondant
-    4. Enregistre dans l'historique
+    1. Détecte si c'est une stack prédéfinie ou une demande de destruction
+    2. Extrait les paramètres via Ollama (multi-tours si besoin)
+    3. Valide la cohérence métier (Pydantic)
+    4. Génère le fichier IaC correspondant
+    5. Calcule le coût estimé + conformité sécurité + diagramme
+    6. Enregistre dans l'historique
     """
     try:
+        # ── Détection de destruction / rollback ──
+        prompt_lower = request.message.lower()
+        destroy_keywords = ["supprime", "supprimer", "destroy", "détruit", "détruire",
+                           "rollback", "delete", "annule", "annuler", "suppression"]
+        is_destroy = any(kw in prompt_lower for kw in destroy_keywords)
+
+        if is_destroy:
+            return _handle_destroy(request)
+
+        # ── Détection de stacks prédéfinies ──
+        stack_name = detecter_stack(request.message)
+        if stack_name:
+            return _handle_stack(request, stack_name)
+
+        # ── Flux normal : extraction NLU ──
         session_id, demande, relance, raw_output = extraire_demande(
             request.message, session_id=request.session_id
         )
@@ -125,11 +149,17 @@ def chat(request: ChatRequest):
             statut="success",
         )
 
-        # -- Intégration GitOps --
+        # -- GitOps --
         from backend.app.git_utils import commit_and_push
         msg_commit = f"Auto-provisioning: {resultat.get('nom_ressource', 'Resource')} via Chatbot"
         git_success = commit_and_push(resultat["fichiers"], msg_commit)
-        
+
+        # -- Nouvelles fonctionnalités --
+        demande_dict = demande.model_dump()
+        cout = estimer_cout(demande_dict)
+        conformite = verifier_conformite(demande_dict)
+        diagramme = generer_diagramme(demande_dict, resultat["nom_ressource"])
+
         message_succes = _generer_message_succes(demande, resultat)
         if not git_success:
             message_succes += "\n\n⚠️ *L'IaC a été générée localement, mais le push vers GitHub a échoué.*"
@@ -141,6 +171,9 @@ def chat(request: ChatRequest):
             generation=GenerationResult(**resultat),
             session_id=session_id,
             raw_model_output=raw_output,
+            diagram=diagramme,
+            cost_estimate=cout,
+            compliance=conformite,
         )
 
     except ValidationError as e:
@@ -153,7 +186,6 @@ def chat(request: ChatRequest):
         return ChatResponse(
             success=False,
             error=f"La demande contient une incohérence : {messages_erreur}",
-            raw_model_output=raw_output if "raw_output" in dir() else None,
         )
 
     except json.JSONDecodeError:
@@ -177,6 +209,114 @@ def chat(request: ChatRequest):
             success=False,
             error=f"Erreur inattendue : {str(e)}",
         )
+
+
+# ─── Handlers spécialisés ──────────────────────────
+
+def _handle_destroy(request: ChatRequest) -> ChatResponse:
+    """Gère les demandes de destruction / rollback."""
+    from backend.app.generators.destroy_gen import (
+        rechercher_ressource,
+        generer_destroy_vsphere,
+        generer_destroy_openshift,
+    )
+
+    # Rechercher la ressource dans l'historique
+    ressources = rechercher_ressource(request.message)
+
+    if not ressources:
+        return ChatResponse(
+            success=True,
+            message="🔍 Je n'ai trouvé aucune ressource correspondant à ta demande dans l'historique. "
+                    "Essaye avec un terme plus précis (nom d'image, type de ressource...).",
+        )
+
+    # Prendre la plus récente
+    derniere = ressources[0]
+
+    # Générer le script de destruction approprié
+    if derniere.type_generation and "vsphere" in derniere.type_generation:
+        resultat = generer_destroy_vsphere(derniere)
+    else:
+        resultat = generer_destroy_openshift(derniere)
+
+    history.enregistrer_requete(
+        prompt=request.message,
+        type_generation=resultat["type"],
+        fichiers_generes=resultat["fichiers"],
+        statut="success",
+    )
+
+    return ChatResponse(
+        success=True,
+        message=f"🗑️ Script de destruction généré pour la ressource :\n"
+                f"• Requête originale : *{derniere.prompt[:80]}*\n"
+                f"• Fichier : {Path(resultat['fichiers'][0]).name}\n\n"
+                f"⚠️ Exécutez le script manuellement pour confirmer la destruction.",
+        generation=GenerationResult(**resultat),
+    )
+
+
+def _handle_stack(request: ChatRequest, stack_name: str) -> ChatResponse:
+    """Gère les demandes de déploiement de stacks prédéfinies."""
+    stack = obtenir_stack(stack_name)
+    if not stack:
+        return ChatResponse(success=False, error=f"Stack '{stack_name}' non trouvée.")
+
+    all_results = []
+    all_fichiers = []
+    total_cost = 0.0
+    all_compliance = []
+    diagrammes = []
+
+    for res_def in stack["resources"]:
+        # Créer une DemandeRessource pour chaque composant
+        demande = DemandeRessource(**{k: v for k, v in res_def.items() if k != "label"})
+        resultat = generer_iac(demande.model_dump(), namespace=request.namespace)
+        all_results.append(GenerationResult(**resultat))
+        all_fichiers.extend(resultat["fichiers"])
+
+        # Coût et compliance pour chaque composant
+        cout = estimer_cout(demande.model_dump())
+        total_cost += cout["total_mensuel"]
+        all_compliance.extend(verifier_conformite(demande.model_dump()))
+        diagrammes.append(generer_diagramme(demande.model_dump(), resultat["nom_ressource"]))
+
+    # Enregistrer dans l'historique
+    history.enregistrer_requete(
+        prompt=request.message,
+        demande_json=json.dumps({"stack": stack_name, "count": len(stack["resources"])}),
+        type_generation=f"stack-{stack_name}",
+        fichiers_generes=all_fichiers,
+        statut="success",
+    )
+
+    # GitOps
+    from backend.app.git_utils import commit_and_push
+    commit_and_push(all_fichiers, f"Auto-provisioning: Stack {stack['name']} via Chatbot")
+
+    # Message récapitulatif
+    composants = "\n".join(
+        f"  • {res_def.get('label', res_def['image'])} ({res_def['resource_type']}/{res_def['platform']})"
+        for res_def in stack["resources"]
+    )
+
+    message = (
+        f"🧱 **Stack {stack['name']}** déployée avec succès !\n"
+        f"📝 {stack['description']}\n\n"
+        f"**Composants générés ({len(stack['resources'])}) :**\n{composants}\n\n"
+        f"💰 Coût mensuel total estimé : **{total_cost:.2f}$**"
+    )
+
+    return ChatResponse(
+        success=True,
+        message=message,
+        generations=all_results,
+        stack_name=stack_name,
+        cost_estimate={"total_mensuel": total_cost, "total_annuel": round(total_cost * 12, 2), "devise": "USD"},
+        compliance=all_compliance,
+        diagram=diagrammes[0] if diagrammes else None,
+    )
 
 
 def _generer_message_succes(demande: DemandeRessource, resultat: dict) -> str:
@@ -208,7 +348,6 @@ def get_history_entry(entry_id: int):
     """Retourne une entrée spécifique de l'historique."""
     entry = history.obtenir_requete(entry_id)
     if not entry:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Entrée non trouvée")
     return entry
 
@@ -217,6 +356,27 @@ def get_history_entry(entry_id: int):
 def get_stats():
     """Retourne des statistiques sur l'historique."""
     return history.compter_requetes()
+
+
+# ─── Rapport PDF ────────────────────────────────────
+
+@app.get("/report/pdf")
+def download_report():
+    """Génère et retourne un rapport PDF des déploiements."""
+    pdf_bytes = generer_rapport_pdf()
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=iac-chatbot-report.pdf"},
+    )
+
+
+# ─── Stacks prédéfinies ────────────────────────────
+
+@app.get("/stacks")
+def get_stacks():
+    """Retourne la liste des stacks prédéfinies disponibles."""
+    return lister_stacks()
 
 
 # ─── Lancement ──────────────────────────────────────
