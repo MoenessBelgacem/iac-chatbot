@@ -9,6 +9,7 @@ env/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
 
 # Environment
 .env
@@ -31,6 +32,10 @@ crash.log
 # Generated output (re-generated on demand)
 generated/
 
+# Node / React
+node_modules/
+frontend-react/dist/
+
 # OS
 Thumbs.db
 Desktop.ini
@@ -38,3 +43,4 @@ Desktop.ini
 
 # Data
 data/*.db
+
