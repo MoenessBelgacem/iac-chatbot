@@ -125,9 +125,18 @@ def chat(request: ChatRequest):
             statut="success",
         )
 
+        # -- Intégration GitOps --
+        from backend.app.git_utils import commit_and_push
+        msg_commit = f"Auto-provisioning: {resultat.get('nom_ressource', 'Resource')} via Chatbot"
+        git_success = commit_and_push(resultat["fichiers"], msg_commit)
+        
+        message_succes = _generer_message_succes(demande, resultat)
+        if not git_success:
+            message_succes += "\n\n⚠️ *L'IaC a été générée localement, mais le push vers GitHub a échoué.*"
+
         return ChatResponse(
             success=True,
-            message=_generer_message_succes(demande, resultat),
+            message=message_succes,
             data=demande,
             generation=GenerationResult(**resultat),
             session_id=session_id,
